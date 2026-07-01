@@ -30,6 +30,22 @@ Generates a completion using an OpenAI-compatible chat completion API.
 }
 ```
 
+### Advanced input
+
+```json
+{
+  "profile": "fast",
+  "prompt": "Reply briefly",
+  "top_p": 0.9,
+  "presence_penalty": 0.1,
+  "frequency_penalty": 0.1,
+  "seed": 42,
+  "response_format": {
+    "type": "json_object"
+  }
+}
+```
+
 ### Output
 
 ```json
@@ -49,6 +65,7 @@ Generates a completion using an OpenAI-compatible chat completion API.
 - Either `prompt` or `messages` is required.
 - `system` is added as the first message when provided.
 - `prompt` is appended as a final user message when provided with `messages`.
-- `model` defaults to `OPENAI_MODEL`.
-- `temperature` defaults to `OPENAI_TEMPERATURE` when set.
-- `max_tokens` defaults to `OPENAI_MAX_TOKENS` when set.
+- `model` overrides all profile/default model settings.
+- `profile` can be `fast`, `smart`, or `local`.
+- `temperature`, `max_tokens`, `top_p`, `presence_penalty`, and `frequency_penalty` can be configured globally or per request.
+- `seed` and `response_format` are request-only optional fields.

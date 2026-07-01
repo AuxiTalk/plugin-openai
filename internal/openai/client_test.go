@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -27,12 +28,7 @@ func TestClientComplete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(Config{
-		APIKey:  "test-key",
-		BaseURL: server.URL,
-		Model:   "test-model",
-		Timeout: time.Second,
-	})
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Model: "test-model", Timeout: time.Second})
 
 	out, err := client.Complete(context.Background(), CompleteInput{Prompt: "hello"})
 	if err != nil {
@@ -73,6 +69,78 @@ func TestClientCompleteWithSystemAndMessages(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("complete: %v", err)
+	}
+}
+
+func TestClientCompleteUsesProfileAndAdvancedParams(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req chatRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		if req.Model != "fast-model" {
+			t.Fatalf("expected fast-model, got %s", req.Model)
+		}
+		if req.TopP == nil || *req.TopP != 0.9 {
+			t.Fatalf("expected top_p 0.9")
+		}
+		if req.Seed == nil || *req.Seed != 42 {
+			t.Fatalf("expected seed 42")
+		}
+		w.Write([]byte(`{"model":"fast-model","choices":[{"message":{"role":"assistant","content":"ok"}}]}`))
+	}))
+	defer server.Close()
+
+	topP := 0.9
+	seed := 42
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Model: "default-model", ModelFast: "fast-model", Timeout: time.Second})
+	_, err := client.Complete(context.Background(), CompleteInput{Prompt: "hello", Profile: "fast", TopP: &topP, Seed: &seed})
+	if err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+}
+
+func TestClientCompleteRetriesRetryableStatus(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&calls, 1)
+		if count == 1 {
+			http.Error(w, "temporary", http.StatusServiceUnavailable)
+			return
+		}
+		w.Write([]byte(`{"model":"test-model","choices":[{"message":{"role":"assistant","content":"ok"}}]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Model: "test-model", Timeout: time.Second, Retries: 1, RetryBackoff: time.Millisecond})
+	_, err := client.Complete(context.Background(), CompleteInput{Prompt: "hello"})
+	if err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 calls, got %d", calls)
+	}
+}
+
+func TestClientHealthOptional(t *testing.T) {
+	client := NewClient(Config{})
+	if err := client.Health(context.Background()); err != nil {
+		t.Fatalf("health disabled should pass: %v", err)
+	}
+}
+
+func TestClientHealthEnabled(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/models" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Write([]byte(`{"data":[]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Timeout: time.Second, HealthCheck: true})
+	if err := client.Health(context.Background()); err != nil {
+		t.Fatalf("health: %v", err)
 	}
 }
 

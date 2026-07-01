@@ -1,12 +1,18 @@
 package openai
 
 type CompleteInput struct {
-	Prompt      string         `json:"prompt,omitempty"`
-	System      string         `json:"system,omitempty"`
-	Messages    []InputMessage `json:"messages,omitempty"`
-	Model       string         `json:"model,omitempty"`
-	Temperature *float64       `json:"temperature,omitempty"`
-	MaxTokens   *int           `json:"max_tokens,omitempty"`
+	Prompt           string         `json:"prompt,omitempty"`
+	System           string         `json:"system,omitempty"`
+	Messages         []InputMessage `json:"messages,omitempty"`
+	Model            string         `json:"model,omitempty"`
+	Profile          string         `json:"profile,omitempty"`
+	Temperature      *float64       `json:"temperature,omitempty"`
+	MaxTokens        *int           `json:"max_tokens,omitempty"`
+	TopP             *float64       `json:"top_p,omitempty"`
+	PresencePenalty  *float64       `json:"presence_penalty,omitempty"`
+	FrequencyPenalty *float64       `json:"frequency_penalty,omitempty"`
+	Seed             *int           `json:"seed,omitempty"`
+	ResponseFormat   any            `json:"response_format,omitempty"`
 }
 
 type InputMessage struct {
@@ -27,10 +33,15 @@ type Usage struct {
 }
 
 type chatRequest struct {
-	Model       string        `json:"model"`
-	Messages    []chatMessage `json:"messages"`
-	Temperature *float64      `json:"temperature,omitempty"`
-	MaxTokens   *int          `json:"max_tokens,omitempty"`
+	Model            string        `json:"model"`
+	Messages         []chatMessage `json:"messages"`
+	Temperature      *float64      `json:"temperature,omitempty"`
+	MaxTokens        *int          `json:"max_tokens,omitempty"`
+	TopP             *float64      `json:"top_p,omitempty"`
+	PresencePenalty  *float64      `json:"presence_penalty,omitempty"`
+	FrequencyPenalty *float64      `json:"frequency_penalty,omitempty"`
+	Seed             *int          `json:"seed,omitempty"`
+	ResponseFormat   any           `json:"response_format,omitempty"`
 }
 
 type chatMessage struct {

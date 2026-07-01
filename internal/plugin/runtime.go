@@ -60,7 +60,14 @@ func (r *Runtime) stop(_ json.RawMessage) (any, error) {
 }
 
 func (r *Runtime) health(_ json.RawMessage) (any, error) {
-	return map[string]any{"ok": true, "pluginId": "openai", "model": r.cfg.Model}, nil
+	ctx, cancel := context.WithTimeout(context.Background(), r.cfg.Timeout)
+	defer cancel()
+
+	if err := r.client.Health(ctx); err != nil {
+		return map[string]any{"ok": false, "pluginId": "openai", "model": r.cfg.Model}, err
+	}
+
+	return map[string]any{"ok": true, "pluginId": "openai", "model": r.cfg.Model, "healthCheck": r.cfg.HealthCheck}, nil
 }
 
 func (r *Runtime) capabilityCall(params json.RawMessage) (any, error) {

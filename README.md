@@ -46,25 +46,22 @@ go test ./...
 
 `ai.complete`
 
-Input:
+Supported optional input fields:
 
-```json
-{
-  "prompt": "Write a short reply",
-  "model": "optional-model",
-  "temperature": 0.7,
-  "max_tokens": 1024
-}
-```
+- `prompt`
+- `system`
+- `messages`
+- `model`
+- `profile`
+- `temperature`
+- `max_tokens`
+- `top_p`
+- `presence_penalty`
+- `frequency_penalty`
+- `seed`
+- `response_format`
 
-Output:
-
-```json
-{
-  "text": "Generated response",
-  "model": "model-name"
-}
-```
+See `docs/capabilities.md` for details.
 
 ## Security
 
