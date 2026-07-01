@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -24,8 +25,9 @@ func NewClient(cfg Config) *Client {
 }
 
 func (c *Client) Complete(ctx context.Context, input CompleteInput) (CompleteOutput, error) {
-	if strings.TrimSpace(input.Prompt) == "" {
-		return CompleteOutput{}, fmt.Errorf("prompt is required")
+	messages, err := buildMessages(input)
+	if err != nil {
+		return CompleteOutput{}, err
 	}
 
 	model := input.Model
@@ -44,10 +46,8 @@ func (c *Client) Complete(ctx context.Context, input CompleteInput) (CompleteOut
 	}
 
 	body := chatRequest{
-		Model: model,
-		Messages: []chatMessage{
-			{Role: "user", Content: input.Prompt},
-		},
+		Model:       model,
+		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
 	}
@@ -73,7 +73,8 @@ func (c *Client) Complete(ctx context.Context, input CompleteInput) (CompleteOut
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return CompleteOutput{}, fmt.Errorf("openai-compatible api returned status %d", resp.StatusCode)
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return CompleteOutput{}, fmt.Errorf("openai-compatible api returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 
 	var parsed chatResponse
@@ -90,4 +91,29 @@ func (c *Client) Complete(ctx context.Context, input CompleteInput) (CompleteOut
 		Model: parsed.Model,
 		Usage: parsed.Usage,
 	}, nil
+}
+
+func buildMessages(input CompleteInput) ([]chatMessage, error) {
+	messages := make([]chatMessage, 0, len(input.Messages)+2)
+
+	if strings.TrimSpace(input.System) != "" {
+		messages = append(messages, chatMessage{Role: "system", Content: input.System})
+	}
+
+	for _, msg := range input.Messages {
+		if strings.TrimSpace(msg.Role) == "" || strings.TrimSpace(msg.Content) == "" {
+			return nil, fmt.Errorf("messages require role and content")
+		}
+		messages = append(messages, chatMessage{Role: msg.Role, Content: msg.Content})
+	}
+
+	if strings.TrimSpace(input.Prompt) != "" {
+		messages = append(messages, chatMessage{Role: "user", Content: input.Prompt})
+	}
+
+	if len(messages) == 0 {
+		return nil, fmt.Errorf("prompt or messages are required")
+	}
+
+	return messages, nil
 }

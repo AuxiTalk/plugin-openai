@@ -1,10 +1,17 @@
 package openai
 
 type CompleteInput struct {
-	Prompt      string   `json:"prompt"`
-	Model       string   `json:"model,omitempty"`
-	Temperature *float64 `json:"temperature,omitempty"`
-	MaxTokens   *int     `json:"max_tokens,omitempty"`
+	Prompt      string         `json:"prompt,omitempty"`
+	System      string         `json:"system,omitempty"`
+	Messages    []InputMessage `json:"messages,omitempty"`
+	Model       string         `json:"model,omitempty"`
+	Temperature *float64       `json:"temperature,omitempty"`
+	MaxTokens   *int           `json:"max_tokens,omitempty"`
+}
+
+type InputMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 type CompleteOutput struct {

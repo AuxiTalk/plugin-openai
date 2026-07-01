@@ -4,7 +4,7 @@
 
 Generates a completion using an OpenAI-compatible chat completion API.
 
-### Input
+### Simple input
 
 ```json
 {
@@ -12,6 +12,21 @@ Generates a completion using an OpenAI-compatible chat completion API.
   "model": "optional-model",
   "temperature": 0.7,
   "max_tokens": 1024
+}
+```
+
+### Chat input
+
+```json
+{
+  "system": "You are a helpful assistant.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ],
+  "prompt": "Continue the conversation"
 }
 ```
 
@@ -31,7 +46,9 @@ Generates a completion using an OpenAI-compatible chat completion API.
 
 ### Notes
 
-- `prompt` is required.
+- Either `prompt` or `messages` is required.
+- `system` is added as the first message when provided.
+- `prompt` is appended as a final user message when provided with `messages`.
 - `model` defaults to `OPENAI_MODEL`.
 - `temperature` defaults to `OPENAI_TEMPERATURE` when set.
 - `max_tokens` defaults to `OPENAI_MAX_TOKENS` when set.
