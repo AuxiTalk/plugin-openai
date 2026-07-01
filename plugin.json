@@ -1,0 +1,10 @@
+{
+  "id": "openai",
+  "name": "OpenAI Compatible AI",
+  "version": "0.1.0",
+  "runtime": "./plugin-openai",
+  "entry": "",
+  "kind": "ai",
+  "permissions": [],
+  "capabilities": [{"name": "ai.complete"}]
+}
