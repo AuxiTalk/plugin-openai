@@ -163,3 +163,47 @@ func TestClientCompleteRequiresPromptOrMessages(t *testing.T) {
 		t.Fatal("expected prompt or messages required error")
 	}
 }
+
+func TestClientCompleteReturnsNoChoicesError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"model":"test-model","choices":[]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Model: "test-model", Timeout: time.Second})
+	_, err := client.Complete(context.Background(), CompleteInput{Prompt: "hello"})
+	if err == nil || !strings.Contains(err.Error(), "no choices") {
+		t.Fatalf("expected no choices error, got %v", err)
+	}
+}
+
+func TestClientCompleteDoesNotRetryBadRequest(t *testing.T) {
+	var calls int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		http.Error(w, "bad request", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Model: "test-model", Timeout: time.Second, Retries: 3, RetryBackoff: time.Millisecond})
+	_, err := client.Complete(context.Background(), CompleteInput{Prompt: "hello"})
+	if err == nil {
+		t.Fatal("expected bad request error")
+	}
+	if calls != 1 {
+		t.Fatalf("expected no retry on bad request, got %d calls", calls)
+	}
+}
+
+func TestClientHealthReturnsErrorBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "models unavailable", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	client := NewClient(Config{APIKey: "test-key", BaseURL: server.URL, Timeout: time.Second, HealthCheck: true})
+	err := client.Health(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "models unavailable") {
+		t.Fatalf("expected health error body, got %v", err)
+	}
+}
